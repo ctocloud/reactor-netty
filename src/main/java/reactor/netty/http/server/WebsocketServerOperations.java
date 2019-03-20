@@ -56,6 +56,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	final WebSocketServerHandshaker handshaker;
 	final ChannelPromise            handshakerResult;
+	final boolean                   proxyPing;
 
 	volatile int closeSent;
 
@@ -66,6 +67,9 @@ final class WebsocketServerOperations extends HttpServerOperations
 		super(replaced);
 
 		Channel channel = replaced.channel();
+
+		String proxyPingProp = System.getProperty("reactor.netty.websocket.proxy.ping", "false");
+		proxyPing = "true".equalsIgnoreCase(proxyPingProp);
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory =
@@ -130,7 +134,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 					close.content()), f -> terminate());
 			return;
 		}
-		if (frame instanceof PingWebSocketFrame) {
+		if (!proxyPing && frame instanceof PingWebSocketFrame) {
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()));
 			ctx.read();
 			return;
